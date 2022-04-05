@@ -3,6 +3,9 @@ from core.models import Evento
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from datetime import datetime, timedelta
+from django.http.response import Http404
+
 
 def login_user(request):
     return render(request, 'login.html')
@@ -26,7 +29,9 @@ def submit_login(request):
 @login_required(login_url='/login/')  # exige que a autenticação seja realizada para ir para a pagina
 def lista_eventos(request):
     usuario = request.user
-    evento = Evento.objects.filter(usuario=usuario)
+    data_atual = datetime.now() - timedelta(hours=1)
+    evento = Evento.objects.filter(usuario=usuario,
+                                   data_evento__gt=data_atual)
     dados = {'eventos':evento}
     return render(request, 'agenda.html', dados)
 
@@ -60,7 +65,12 @@ def submit_evento(request):
 @login_required(login_url='/login/')
 def delete_evento(request, id_evento):
     usuario = request.user
-    evento = Evento.objects.get(id=id_evento)
+    try:
+        evento = Evento.objects.get(id=id_evento)
+    except Exception:
+        raise Http404()
     if usuario == evento.usuario:
         evento.delete()
+    else:
+        raise Http404()
     return redirect('/', id)
